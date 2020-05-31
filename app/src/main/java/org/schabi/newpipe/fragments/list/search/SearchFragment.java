@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.ReCaptchaActivity;
 import org.schabi.newpipe.database.history.model.SearchHistoryEntry;
+import org.schabi.newpipe.databinding.FragmentSearchBinding;
 import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.NewPipe;
@@ -75,7 +76,7 @@ import static androidx.recyclerview.widget.ItemTouchHelper.Callback.makeMovement
 import static java.util.Arrays.asList;
 import static org.schabi.newpipe.util.AnimationUtils.animateView;
 
-public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.InfoItemsPage>
+public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.InfoItemsPage<?>>
         implements BackPressable {
     /*//////////////////////////////////////////////////////////////////////////
     // Search
@@ -125,7 +126,6 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
     private StreamingService service;
     private String currentPageUrl;
     private String nextPageUrl;
-    private String contentCountry;
     private boolean isSuggestionsEnabled = true;
 
     private Disposable searchDisposable;
@@ -139,12 +139,11 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
     // Views
     //////////////////////////////////////////////////////////////////////////*/
 
+    private FragmentSearchBinding binding;
+
     private View searchToolbarContainer;
     private EditText searchEditText;
     private View searchClear;
-
-    private View suggestionsPanel;
-    private RecyclerView suggestionsRecyclerView;
 
     /*////////////////////////////////////////////////////////////////////////*/
 
@@ -192,14 +191,13 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
         isSuggestionsEnabled = preferences
                 .getBoolean(getString(R.string.show_search_suggestions_key), true);
-        contentCountry = preferences.getString(getString(R.string.content_country_key),
-                getString(R.string.default_localization_key));
     }
 
     @Override
     public View onCreateView(final LayoutInflater inflater, @Nullable final ViewGroup container,
                              @Nullable final Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_search, container, false);
+        binding = FragmentSearchBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
@@ -237,8 +235,8 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         try {
             service = NewPipe.getService(serviceId);
         } catch (Exception e) {
-            ErrorActivity.reportError(getActivity(), e, getActivity().getClass(),
-                    getActivity().findViewById(android.R.id.content),
+            ErrorActivity.reportError(getActivity(), e, requireActivity().getClass(),
+                    binding.getRoot(),
                     ErrorActivity.ErrorInfo.make(UserAction.UI_ERROR,
                             "",
                             "", R.string.general_error));
@@ -276,8 +274,14 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (DEBUG) {
             Log.d(TAG, "onDestroyView() called");
         }
+
         unsetSearchListeners();
         super.onDestroyView();
+
+        binding = null;
+        searchToolbarContainer = null;
+        searchEditText = null;
+        searchClear = null;
     }
 
     @Override
@@ -319,9 +323,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
     @Override
     protected void initViews(final View rootView, final Bundle savedInstanceState) {
         super.initViews(rootView, savedInstanceState);
-        suggestionsPanel = rootView.findViewById(R.id.suggestions_panel);
-        suggestionsRecyclerView = rootView.findViewById(R.id.suggestions_list);
-        suggestionsRecyclerView.setAdapter(suggestionListAdapter);
+        binding.suggestionsList.setAdapter(suggestionListAdapter);
         new ItemTouchHelper(new ItemTouchHelper.Callback() {
             @Override
             public int getMovementFlags(@NonNull final RecyclerView recyclerView,
@@ -340,7 +342,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
             public void onSwiped(@NonNull final RecyclerView.ViewHolder viewHolder, final int i) {
                 onSuggestionItemSwiped(viewHolder, i);
             }
-        }).attachToRecyclerView(suggestionsRecyclerView);
+        }).attachToRecyclerView(binding.suggestionsList);
 
         searchToolbarContainer = activity.findViewById(R.id.toolbar_search_container);
         searchEditText = searchToolbarContainer.findViewById(R.id.toolbar_search_edit_text);
@@ -609,14 +611,16 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (DEBUG) {
             Log.d(TAG, "showSuggestionsPanel() called");
         }
-        animateView(suggestionsPanel, AnimationUtils.Type.LIGHT_SLIDE_AND_ALPHA, true, 200);
+        animateView(binding.suggestionsPanel,
+                AnimationUtils.Type.LIGHT_SLIDE_AND_ALPHA, true, 200);
     }
 
     private void hideSuggestionsPanel() {
         if (DEBUG) {
             Log.d(TAG, "hideSuggestionsPanel() called");
         }
-        animateView(suggestionsPanel, AnimationUtils.Type.LIGHT_SLIDE_AND_ALPHA, false, 200);
+        animateView(binding.suggestionsPanel,
+                AnimationUtils.Type.LIGHT_SLIDE_AND_ALPHA, false, 200);
     }
 
     private void showKeyboardSearch() {
@@ -677,7 +681,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
 
     @Override
     public boolean onBackPressed() {
-        if (suggestionsPanel.getVisibility() == View.VISIBLE
+        if (binding.suggestionsPanel.getVisibility() == View.VISIBLE
                 && infoListAdapter.getItemsList().size() > 0
                 && !isLoading.get()) {
             hideSuggestionsPanel();
@@ -907,8 +911,8 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (DEBUG) {
             Log.d(TAG, "handleSuggestions() called with: suggestions = [" + suggestions + "]");
         }
-        suggestionsRecyclerView.smoothScrollToPosition(0);
-        suggestionsRecyclerView.post(() -> suggestionListAdapter.setItems(suggestions));
+        binding.suggestionsList.smoothScrollToPosition(0);
+        binding.suggestionsList.post(() -> suggestionListAdapter.setItems(suggestions));
 
         if (errorPanelRoot.getVisibility() == View.VISIBLE) {
             hideLoading();
