@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'checkstyle'
+
 
 android {
     compileSdkVersion 29
@@ -64,8 +64,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility "1.8"
+        targetCompatibility "1.8"
         encoding 'utf-8'
     }
 
@@ -91,31 +91,7 @@ ext {
     markwonVersion = '4.3.1'
 }
 
-checkstyle {
-    configFile rootProject.file('checkstyle.xml')
-    ignoreFailures false
-    showViolations true
-    toolVersion = checkstyleVersion
-}
 
-task runCheckstyle(type: Checkstyle) {
-    source 'src'
-    include '**/*.java'
-    exclude '**/gen/**'
-    exclude '**/R.java'
-    exclude '**/BuildConfig.java'
-    exclude 'main/java/us/shandian/giga/**'
-
-    // empty classpath
-    classpath = files()
-
-    showViolations true
-
-    reports {
-        xml.enabled true
-        html.enabled true
-    }
-}
 
 configurations {
     ktlint
@@ -134,7 +110,7 @@ task formatKtlint(type: JavaExec) {
 }
 
 afterEvaluate {
-    preDebugBuild.dependsOn runCheckstyle, runKtlint
+    preDebugBuild.dependsOn runKtlint
 }
 
 dependencies {
@@ -207,6 +183,11 @@ dependencies {
     implementation "com.jakewharton.rxbinding2:rxbinding:2.2.0"
 
     implementation "org.ocpsoft.prettytime:prettytime:4.0.5.Final"
+
+    androidTestImplementation 'androidx.test:runner:1.2.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    androidTestImplementation 'androidx.test:rules:1.2.0'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-contrib:3.0.2'
 }
 
 static String getGitWorkingBranch() {
